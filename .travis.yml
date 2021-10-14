@@ -1,43 +1,32 @@
 language: go
-
 go:
-  - 1.14.x
+  - "1.14.x"
 
-go_import_path: github.com/Fantom-foundation/go-opera
-
-cache:
-  directories:
-    - $GOPATH/pkg
+services:
+  - docker
 
 env:
   global:
     - GO111MODULE=on
 
-# install: skip
+before_install:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+
+install:
+  - echo 'skip install'
 
 script:
-  - go build -v ./...
+  - echo 'skip script'
 
 after_success:
-  - |
-    if [ -n "$GO_TEST" ]; then
-      go test -coverprofile=coverage.txt -covermode=atomic ./...
-    elif [ -n "$GO_INTEGRATION_TEST" ]; then
-      go test ./integration/
-    fi
+  - docker --version
+  - docker build -f docker/Dockerfile.opera --label "commit=$TRAVIS_COMMIT" -t kybernetwork/go-opera:$TRAVIS_COMMIT .
 
-after_script:
-  - |
-    if [ -n "$GO_TEST" ]; then
-      bash <(curl -s https://codecov.io/bash)
-    fi
-
-matrix:
-  include:
-    - name: go test
-      env:
-        - GO_TEST=1
-
-    - name: testnet
-      env:
-        - GO_INTEGRATION_TEST=1
+deploy:
+  - provider: script
+    script: bash .travis/docker_push.sh
+    on:
+      all_branches: true
